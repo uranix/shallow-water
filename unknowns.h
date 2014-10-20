@@ -4,7 +4,10 @@
 #include "sloped.h"
 #include "mem.h"
 
-template<typename real, class Allocator = std::allocator<sloped<real> > >
+template<
+    typename real,
+    class Allocator = std::allocator<sloped<real> >
+>
 struct unknowns {
     sloped_array<real, Allocator> h;
     sloped_array<real, Allocator> hu;
@@ -18,10 +21,6 @@ struct unknowns {
         mem::copy(this->hv, other.hv);
 
         return *this;
-    }
-
-    void blend_with(const real weight, const unknowns &other) {
-        throw "not implemented";
     }
 };
 
