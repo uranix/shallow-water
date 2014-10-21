@@ -57,6 +57,7 @@ public:
 private:
 
     void compute_fluxes(const gpu_unknowns &u) {
+        sctx->blend(v, .5, u);
         NOT_IMPLEMENTED;
     }
 

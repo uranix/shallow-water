@@ -10,11 +10,11 @@ struct type_prefix {
 };
 
 template<> struct type_prefix<float> {
-    static const std::string get() { return std::string("float"); }
+    static const std::string get() { return std::string("s"); }
 };
 
 template<> struct type_prefix<double> {
-    static const std::string get() { return std::string("double"); }
+    static const std::string get() { return std::string("d"); }
 };
 
 #define DECLARE_PREFIXED_KERNEL(T, name, classname, member) class __kernel_ ## name { mutable CUfunction __f; const char *__name; \
