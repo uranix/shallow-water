@@ -1,12 +1,13 @@
 #ifndef __MEM_H__
 #define __MEM_H__
 
-#include "array2d.h"
 #include "gpu_allocator.h"
 
 #include <cassert>
 
 #define ASSERT assert
+
+template<class elem, class Allocator> class array2d;
 
 struct mem {
     template<class E>

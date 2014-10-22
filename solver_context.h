@@ -5,22 +5,22 @@
 #include "unknowns.h"
 
 template<typename real>
-struct type_prefix {
+struct type_suffix {
     static const std::string get();
 };
 
-template<> struct type_prefix<float> {
-    static const std::string get() { return std::string("s"); }
+template<> struct type_suffix<float> {
+    static const std::string get() { return std::string("_float"); }
 };
 
-template<> struct type_prefix<double> {
-    static const std::string get() { return std::string("d"); }
+template<> struct type_suffix<double> {
+    static const std::string get() { return std::string("_double"); }
 };
 
 #define DECLARE_PREFIXED_KERNEL(T, name, classname, member) class __kernel_ ## name { mutable CUfunction __f; const char *__name; \
     public: __kernel_ ## name() : __f(0), __name(#name) { } \
     cuda_helper::configured_call operator()(cuda_helper::dim3 grid, cuda_helper::dim3 block, unsigned int shmem = 0, CUstream stream = 0) const { \
-        if (!__f) { __f = CUDA_HELPER_OUTERCLASS(classname, member)->lookup((type_prefix<T>::get() + __name).c_str()); } \
+        if (!__f) { __f = CUDA_HELPER_OUTERCLASS(classname, member)->lookup((std::string(__name) + type_suffix<real>::get()).c_str()); } \
         return cuda_helper::configured_call(__f, grid, block, shmem, stream); \
     } } member
 
@@ -38,7 +38,9 @@ struct solver_context : public cuda_helper::cuda_context {
 
     solver_context(const int devid = 0, unsigned int flags = CU_CTX_SCHED_AUTO, bool performInit = true)
         : cuda_context(devid, flags, performInit)
-    { }
+    {
+        load_module("kernels.ptx");
+    }
 
     void blend(gpu_unknowns &u, const real w, const gpu_unknowns &o)
     {

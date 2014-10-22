@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <memory>
 
+#include "mem.h"
+
 template<size_t align>
 constexpr size_t alignup(size_t n) {
     static_assert(!(align & (align - 1)), "ailgn size must be a power of two");
@@ -30,7 +32,12 @@ public:
 
     array2d(const array2d &) = delete;
     array2d(const array2d &&) = delete;
-    array2d &operator=(const array2d &) = delete;
+
+    template<class OtherAllocator>
+    array2d &operator=(const array2d<elem, OtherAllocator> &o) {
+        mem::copy(*this, o);
+        return *this;
+    }
 
     inline size_t n() const { return _n; }
     inline size_t m() const { return _m; }

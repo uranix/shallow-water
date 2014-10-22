@@ -1,11 +1,15 @@
-extern "C" __global__ void sum(const int N, const float *a, const float *b, float *c) {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    if (i < N)
-        c[i] = a[i] + b[i];
-}
+#include "sloped.h"
 
-extern "C" __global__ void scal(const int N, float *a, float m) {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    if (i < N)
-        a[i] *= m;
-}
+#include <cstdlib>
+
+#define real float
+
+#include "kernels.impl.cu"
+
+#undef real
+
+#define real double
+
+#include "kernels.impl.cu"
+
+#undef real
