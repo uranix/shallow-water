@@ -1,28 +1,20 @@
 #ifndef __UNKNOWNS_H__
 #define __UNKNOWNS_H__
 
-#include "sloped.h"
 #include "mem.h"
 
-template<
-    typename real,
-    class Allocator = std::allocator<sloped<real> >
->
+template<class ComponentType>
 struct unknowns {
-    sloped_array<real, Allocator> h;
-    sloped_array<real, Allocator> hu;
-    sloped_array<real, Allocator> hv;
+    ComponentType h, hu, hv;
     unknowns(size_t m, size_t n) : h(m, n), hu(m, n), hv(m, n) { }
-
-    template<class OtherAllocator>
-    unknowns &operator=(const unknowns<real, OtherAllocator> &other) {
-        mem::copy(this->h, other.h);
-        mem::copy(this->hu, other.hu);
-        mem::copy(this->hv, other.hv);
-
+    unknowns() { }
+    template<class OtherComponentType>
+    unknowns &operator=(const unknowns<OtherComponentType> &o) {
+        h  = o.h;
+        hu = o.hu;
+        hv = o.hv;
         return *this;
     }
 };
-
 
 #endif

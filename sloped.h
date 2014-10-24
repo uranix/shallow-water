@@ -38,6 +38,15 @@ struct sloped {
         vy -= o.vy;
         return *this;
     }
+    APICALL real mid() const { return v; }
+    APICALL real rt() const { return v + vx; }
+    APICALL real lf() const { return v - vx; }
+    APICALL real up() const { return v + vy; }
+    APICALL real dn() const { return v - vy; }
+    APICALL real ll() const { return v - vx - vy; }
+    APICALL real lr() const { return v + vx - vy; }
+    APICALL real ul() const { return v - vx + vy; }
+    APICALL real ur() const { return v + vx + vy; }
 };
 
 template<typename real>

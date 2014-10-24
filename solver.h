@@ -1,16 +1,17 @@
 #ifndef __SOLVER_H__
 #define __SOLVER_H__
 
+#define NOT_IMPLEMENTED throw std::runtime_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " error: " + __func__ + " not implemented");
+
 #include "solver_context.h"
 #include "mem.h"
 #include "unknowns.h"
+#include "sloped.h"
 
 #include <memory>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-
-#define NOT_IMPLEMENTED throw std::runtime_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " error: " + __func__ + " not implemented");
 
 template<typename real, int time_order, class Problem>
 class Solver {
@@ -18,22 +19,24 @@ class Solver {
     const real C;
     const real hx, hy;
 
-    typedef mem::template gpu_array<sloped<real> > gpu_sloped;
-    typedef mem::template host_array<sloped<real> > host_sloped;
+    typedef mem::template  gpu_array<real>           gpu_array;
+    typedef mem::template  gpu_array<sloped<real> >  gpu_sloped_array;
+    typedef mem::template host_array<sloped<real> > host_sloped_array;
 
-    typedef unknowns<real, cuda_helper::allocator<sloped<real> > > gpu_unknowns;
-    typedef unknowns<real> host_unknowns;
+    typedef unknowns< gpu_array>         gpu_flux;
+    typedef unknowns< gpu_sloped_array>  gpu_unknowns;
+    typedef unknowns<host_sloped_array> host_unknowns;
 
     gpu_unknowns u;
     gpu_unknowns v;
-    gpu_unknowns fx;
-    gpu_unknowns fy;
-    gpu_sloped b;
-
-    std::shared_ptr<solver_context<real> > sctx;
+    gpu_flux fx;
+    gpu_flux fy;
+    gpu_sloped_array b;
 
     host_unknowns u_host;
-    host_sloped b_host;
+    host_sloped_array b_host;
+
+    std::shared_ptr<solver_context<real> > sctx;
 
     real t, dt;
     int _step;
@@ -57,14 +60,31 @@ public:
         if (time_order == 3 && C > .409)
             std::cerr << "Method is likely to be unstable for C > .409" << std::endl;
 
-        t = 0;
-        _step = 0;
+        initialize();
     }
 
 private:
 
+    void initialize() {
+        t = 0;
+        _step = 0;
+
+        for (size_t i = 0; i <= M + 1; i++)
+            for (size_t j = 0; j <= N + 1; j++) {
+                double x = (i - 1) * hx;
+                double y = (j - 1) * hy;
+
+                prob.initial(x, y, b_host(i, j),
+                        u_host.h(i, j), u_host.hu(i, j), u_host.hv(i, j));
+            }
+        u = u_host;
+        b = b_host;
+
+        sctx->deriv_to_slope(hx, hy, b, u);
+    }
+
     void compute_fluxes(const gpu_unknowns &u) {
-        NOT_IMPLEMENTED;
+        sctx->compute_fluxes(u, fx, fy);
     }
 
     void add_fluxes_and_rhs(const real dt, const gpu_unknowns &u0, gpu_unknowns &u) {
