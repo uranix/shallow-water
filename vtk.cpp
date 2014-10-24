@@ -27,33 +27,33 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
     f << "DATASET RECTILINEAR_GRID\n";
     f << "DIMENSIONS " << M + 1 << " " << N + 1 << " 1";
     f << "\nX_COORDINATES " << M + 1 << " float\n";
-    for (int i = 0; i <= M; i++)
+    for (size_t i = 0; i <= M; i++)
         put<float>(f, i * hx);
     f << "\nY_COORDINATES " << N + 1 << " float\n";
-    for (int j = 0; j <= N; j++)
+    for (size_t j = 0; j <= N; j++)
         put<float>(f, j * hy);
     f << "\nZ_COORDINATES " << 1 << " float\n";
     put<float>(f, 0);
     f << "\nCELL_DATA " << N * M;
 
     f << "\nSCALARS h float\nLOOKUP_TABLE default\n";
-    for (int j = 1; j <= N; j++)
-        for (int i = 1; i <= M; i++)
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++)
             put<float>(f, u_host.h(i, j).mid());
 
     f << "\nSCALARS b float\nLOOKUP_TABLE default\n";
-    for (int j = 1; j <= N; j++)
-        for (int i = 1; i <= M; i++)
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++)
             put<float>(f, b_host(i, j).mid());
 
     f << "\nSCALARS zeta float\nLOOKUP_TABLE default\n";
-    for (int j = 1; j <= N; j++)
-        for (int i = 1; i <= M; i++)
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++)
             put<float>(f, b_host(i, j).mid() + u_host.h(i, j).mid());
 
     f << "\nVECTORS v float\n";
-        for (int j = 1; j <= N; j++)
-            for (int i = 1; i <= M; i++) {
+        for (size_t j = 1; j <= N; j++)
+            for (size_t i = 1; i <= M; i++) {
                 real h = u_host.h(i, j).mid();
                 real vx = u_host.hu(i, j).mid() / h;
                 real vy = u_host.hv(i, j).mid() / h;
@@ -75,24 +75,25 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
     f << "BINARY\n";
     f << "DATASET UNSTRUCTURED_GRID\n";
     f << "POINTS " << M * N * 4 << " float\n";
-    for (int j = 0; j < N; j++)
-        for (int i = 0; i < M; i++) {
+    for (size_t j = 0; j < N; j++)
+        for (size_t i = 0; i < M; i++) {
+            const sloped<real> &h = u_host.h(i, j);
             put<float>(f, i * hx);
             put<float>(f, j * hy);
-            put<float>(f, 0);
+            put<float>(f, h.ll());
             put<float>(f, i * hx + hx);
             put<float>(f, j * hy);
-            put<float>(f, 0);
+            put<float>(f, h.lr());
             put<float>(f, i * hx + hx);
             put<float>(f, j * hy + hy);
-            put<float>(f, 0);
+            put<float>(f, h.ur());
             put<float>(f, i * hx);
             put<float>(f, j * hy + hy);
-            put<float>(f, 0);
+            put<float>(f, h.ul());
         }
     int cnt = 0;
     f << "\nCELLS " << N * M << " " << 5 * N * M << "\n";
-    for (int i = 0; i < M * N; i++) {
+    for (size_t i = 0; i < M * N; i++) {
         put<int>(f, 4);
         put<int>(f, cnt); cnt++;
         put<int>(f, cnt); cnt++;
@@ -100,12 +101,12 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
         put<int>(f, cnt); cnt++;
     }
     f << "\nCELL_TYPES " << N * M << "\n";
-    for (int i = 0; i < M * N; i++)
+    for (size_t i = 0; i < M * N; i++)
         put<int>(f, 9);
     f << "\nCELL_DATA " << N * M;
     f << "\nVECTORS v float\n";
-        for (int j = 1; j <= N; j++)
-            for (int i = 1; i <= M; i++) {
+        for (size_t j = 1; j <= N; j++)
+            for (size_t i = 1; i <= M; i++) {
                 real h = u_host.h(i, j).mid();
                 real vx = u_host.hu(i, j).mid() / h;
                 real vy = u_host.hv(i, j).mid() / h;
@@ -115,8 +116,8 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
             }
     f << "\nPOINT_DATA " << 4 * N * M;
     f << "\nSCALARS h float\nLOOKUP_TABLE default\n";
-    for (int j = 1; j <= N; j++)
-        for (int i = 1; i <= M; i++) {
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++) {
             put<float>(f, u_host.h(i, j).ll());
             put<float>(f, u_host.h(i, j).lr());
             put<float>(f, u_host.h(i, j).ur());
@@ -124,8 +125,8 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
         }
 
     f << "\nSCALARS b float\nLOOKUP_TABLE default\n";
-    for (int j = 1; j <= N; j++)
-        for (int i = 1; i <= M; i++) {
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++) {
             put<float>(f, b_host(i, j).ll());
             put<float>(f, b_host(i, j).lr());
             put<float>(f, b_host(i, j).ur());
@@ -133,8 +134,8 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
         }
 
     f << "\nSCALARS zeta float\nLOOKUP_TABLE default\n";
-    for (int j = 1; j <= N; j++)
-        for (int i = 1; i <= M; i++) {
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++) {
             put<float>(f, b_host(i, j).ll() + u_host.h(i, j).ll());
             put<float>(f, b_host(i, j).lr() + u_host.h(i, j).lr());
             put<float>(f, b_host(i, j).ur() + u_host.h(i, j).ur());

@@ -24,6 +24,14 @@ struct mem {
     }
 
     template<class E>
+    static void copy(gpu_array<E> &dst, const gpu_array<E> &src) {
+        ASSERT(dst.m() == src.m());
+        ASSERT(dst.n() == src.n());
+        ASSERT(dst.ld() == src.ld());
+        CUDA_CHECK(cuMemcpyDtoD(reinterpret_cast<CUdeviceptr>(dst.data()), reinterpret_cast<CUdeviceptr>(src.data()), src.size() * sizeof(E)));
+    }
+
+    template<class E>
     static void copy(host_array<E> &dst, const gpu_array<E> &src) {
         ASSERT(dst.m() == src.m());
         ASSERT(dst.n() == src.n());

@@ -15,7 +15,7 @@
 
 template<typename real, int time_order, class Problem>
 class Solver {
-    const int M, N;
+    const size_t M, N;
     const real C;
     const real hx, hy;
 
@@ -88,11 +88,12 @@ private:
     }
 
     void add_fluxes_and_rhs(const real dt, const gpu_unknowns &u0, gpu_unknowns &u) {
-        NOT_IMPLEMENTED;
+        u = u0;
+//        NOT_IMPLEMENTED;
     }
 
     void limit_slopes(gpu_unknowns &u) {
-        NOT_IMPLEMENTED;
+//        NOT_IMPLEMENTED;
     }
 
     void euler_limited(const real dt, const gpu_unknowns &u0, gpu_unknowns &u) {

@@ -33,6 +33,11 @@ public:
     array2d(const array2d &) = delete;
     array2d(const array2d &&) = delete;
 
+    array2d &operator=(const array2d &o) {
+        mem::copy(*this, o);
+        return *this;
+    }
+
     template<class OtherAllocator>
     array2d &operator=(const array2d<elem, OtherAllocator> &o) {
         mem::copy(*this, o);

@@ -1,11 +1,11 @@
-#define SUFFIXED2(real, name) name ## _ ## real
-#define SUFFIXED1(real, name) SUFFIXED2(real, name)
-#define SUFFIXED(name) SUFFIXED1(real, name)
+#define _SUFFIXED2(real, name) name ## _ ## real
+#define _SUFFIXED1(real, name) _SUFFIXED2(real, name)
+#define SUFFIXED(name) _SUFFIXED1(real, name)
 
 extern "C" __global__ void SUFFIXED(blend)(
         const size_t m, const size_t n, const size_t ld, const real w,
-        sloped<real> *uh, sloped<real> *uhu, sloped<real> *uhv,
-        const sloped<real> *oh, const sloped<real> *ohu, const sloped<real> *ohv
+        raw_unknowns<sloped<real> *> u,
+        raw_unknowns<const sloped<real> *> o
     )
 {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -13,16 +13,23 @@ extern "C" __global__ void SUFFIXED(blend)(
     size_t xy = x + ld * y;
     real wu = 1 - w;
     if (x < m && y < n) {
-        uh [xy] = wu * uh [xy] + w * oh [xy];
-        uhu[xy] = wu * uhu[xy] + w * ohu[xy];
-        uhv[xy] = wu * uhv[xy] + w * ohv[xy];
+        u.h [xy] = wu * u.h [xy] + w * o.h [xy];
+        u.hu[xy] = wu * u.hu[xy] + w * o.hu[xy];
+        u.hv[xy] = wu * u.hv[xy] + w * o.hv[xy];
     }
+}
+
+__device__ inline void d2s(sloped<real> &val, const real sx, const real sy) {
+    sloped<real> z = val;
+    z.vx *= sx;
+    z.vy *= sy;
+    val = z;
 }
 
 extern "C" __global__ void SUFFIXED(der2slope)(
         const size_t m, const size_t n, const size_t ld,
         const real hx, const real hy,
-        sloped<real> *b, sloped<real> *h, sloped<real> *hu, sloped<real> *hv
+        sloped<real> *b, raw_unknowns<sloped<real> * > u
     )
 {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -33,20 +40,17 @@ extern "C" __global__ void SUFFIXED(der2slope)(
     const real hy2 = hy / 2;
 
     if (x < m && y < n) {
-        sloped<real> z = b[xy];
-        z.vx *= hx2; z.vy *= hy2;
-        b[xy] = z;
-
-        z = h[xy];
-        z.vx *= hx2; z.vy *= hy2;
-        h[xy] = z;
-
-        z = hu[xy];
-        z.vx *= hx2; z.vy *= hy2;
-        hu[xy] = z;
-
-        z = hv[xy];
-        z.vx *= hx2; z.vy *= hy2;
-        hv[xy] = z;
+        d2s(b   [xy], hx2, hy2);
+        d2s(u.h [xy], hx2, hy2);
+        d2s(u.hu[xy], hx2, hy2);
+        d2s(u.hv[xy], hx2, hy2);
     }
+}
+
+extern "C" __global__ void SUFFIXED(flux)(
+        const size_t m, const size_t n, const size_t ld, const size_t lines,
+        raw_unknowns<const sloped<real> *> u,
+        raw_unknowns<real *> fx, raw_unknowns<real *> fy
+    )
+{
 }

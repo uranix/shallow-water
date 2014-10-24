@@ -18,7 +18,7 @@ template<> struct type_suffix<double> {
     static const std::string get() { return std::string("_double"); }
 };
 
-#define DECLARE_PREFIXED_KERNEL(T, name, classname, member) class __kernel_ ## name { mutable CUfunction __f; const char *__name; \
+#define DECLARE_SUFFIXED_KERNEL(T, name, classname, member) class __kernel_ ## name { mutable CUfunction __f; const char *__name; \
     public: __kernel_ ## name() : __f(0), __name(#name) { } \
     cuda_helper::configured_call operator()(cuda_helper::dim3 grid, cuda_helper::dim3 block, unsigned int shmem = 0, CUstream stream = 0) const { \
         if (!__f) { __f = CUDA_HELPER_OUTERCLASS(classname, member)->lookup((std::string(__name) + type_suffix<real>::get()).c_str()); } \
@@ -38,8 +38,9 @@ struct solver_context : public cuda_helper::cuda_context {
     typedef unknowns<gpu_sloped_array> gpu_unknowns;
     typedef unknowns<gpu_array>        gpu_flux;
 
-    DECLARE_PREFIXED_KERNEL(real, blend, solver_context, GPU_blend);
-    DECLARE_PREFIXED_KERNEL(real, der2slope, solver_context, GPU_der2slope);
+    DECLARE_SUFFIXED_KERNEL(real, blend,     solver_context, GPU_blend);
+    DECLARE_SUFFIXED_KERNEL(real, der2slope, solver_context, GPU_der2slope);
+    DECLARE_SUFFIXED_KERNEL(real, flux,      solver_context, GPU_fluxes);
 
     solver_context(const int devid = 0, unsigned int flags = CU_CTX_SCHED_AUTO, bool performInit = true)
         : cuda_context(devid, flags, performInit)
@@ -53,46 +54,57 @@ struct solver_context : public cuda_helper::cuda_context {
         size_t n = u.h.n();
         size_t ld = u.h.ld();
 
-        const sloped<real> *oh  = o.h .data();
-        const sloped<real> *ohu = o.hu.data();
-        const sloped<real> *ohv = o.hv.data();
-
-        sloped<real> *uh  = u.h .data();
-        sloped<real> *uhu = u.hu.data();
-        sloped<real> *uhv = u.hv.data();
+        raw_unknowns<const sloped<real> *> oraw  = o.data();
+        raw_unknowns<sloped<real> *> uraw = u.data();
 
         cuda_helper::dim3 block(32, 16);
         cuda_helper::dim3 grid(ceildiv<32>(m), ceildiv<16>(n));
 
         GPU_blend(grid, block)({
                 &m, &n, &ld, &w,
-                &uh, &uhu, &uhv,
-                &oh, &ohu, &ohv
+                &uraw, &oraw
             });
     }
 
-    void deriv_to_slope(const real hx, const real hy, gpu_sloped_array &barr, gpu_unknowns &u) {
-        size_t m = barr.m();
-        size_t n = barr.n();
-        size_t ld = barr.ld();
+    void deriv_to_slope(const real hx, const real hy, gpu_sloped_array &b, gpu_unknowns &u) {
+        size_t m  = b.m();
+        size_t n  = b.n();
+        size_t ld = b.ld();
 
-        sloped<real> *b  = barr.data();
-        sloped<real> *h  = u.h .data();
-        sloped<real> *hu = u.hu.data();
-        sloped<real> *hv = u.hv.data();
+        sloped<real> *braw  = b.data();
+        raw_unknowns<sloped<real> *> uraw  = u.data();
 
         cuda_helper::dim3 block(32, 16);
         cuda_helper::dim3 grid(ceildiv<32>(m), ceildiv<16>(n));
 
         GPU_der2slope(grid, block)({
                 &m, &n, &ld,
-                &hx, &hy, &b,
-                &h, &hu, &hv
+                &hx, &hy,
+                &braw, &uraw
             });
     }
 
     void compute_fluxes(const gpu_unknowns &u, gpu_flux &fx, gpu_flux &fy) {
-        NOT_IMPLEMENTED;
+        size_t m  = u.m();
+        size_t n  = u.n();
+        size_t ld = u.ld();
+
+        size_t lines = 32;
+
+        raw_unknowns<const sloped<real> *> uraw = u.data();
+
+        raw_unknowns<real *> fxraw  = fx.data();
+        raw_unknowns<real *> fyraw  = fy.data();
+
+        cuda_helper::dim3 block(512);
+        cuda_helper::dim3 grid(ceildiv<512>(m), ceildiv<32>(n));
+
+        GPU_fluxes(grid, block)({
+                &m, &n, &ld, &lines,
+                &uraw,
+                &fxraw,
+                &fyraw
+            });
     }
 };
 
