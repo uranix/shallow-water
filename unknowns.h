@@ -1,11 +1,18 @@
 #ifndef __UNKNOWNS_H__
 #define __UNKNOWNS_H__
 
+#ifdef __NVCC__
+#define APICALL __device__
+#else
+#define APICALL
+#endif
+
 template<class ComponentType>
 struct raw_unknowns {
     ComponentType h, hu, hv;
-    raw_unknowns(size_t m, size_t n) : h(m, n), hu(m, n), hv(m, n) { }
-    raw_unknowns(ComponentType &h, ComponentType &hu, ComponentType &hv)
+    APICALL raw_unknowns() { }
+    APICALL raw_unknowns(size_t m, size_t n) : h(m, n), hu(m, n), hv(m, n) { }
+    APICALL raw_unknowns(const ComponentType &h, const ComponentType &hu, const ComponentType &hv)
         : h(h), hu(hu), hv(hv)
     { }
 };
@@ -14,6 +21,7 @@ struct raw_unknowns {
 
 template<class ComponentType>
 struct unknowns : public raw_unknowns<ComponentType> {
+    unknowns() { }
     unknowns(size_t m, size_t n) : raw_unknowns<ComponentType>(m, n) { }
     unknowns(ComponentType &h, ComponentType &hu, ComponentType &hv)
         : raw_unknowns<ComponentType>(h, hu, hv)

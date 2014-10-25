@@ -15,7 +15,11 @@ struct sloped {
 #if USE_PADDING
     real padding;
 #endif
+#ifdef __NVCC__
+    APICALL sloped() { }
+#else
     APICALL sloped() : sloped(0, 0, 0) { }
+#endif
     APICALL sloped(const real v, const real vx, const real vy) : v(v), vx(vx), vy(vy) { }
     APICALL const sloped operator+(const sloped &o) const {
         return sloped(v + o.v, vx + o.vx, vy + o.vy);

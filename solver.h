@@ -50,7 +50,7 @@ public:
             std::shared_ptr<solver_context<real> > ctx
     ) :
         M(M), N(N), C(C), hx(prob.xlen() / M), hy(prob.ylen() / N),
-        u(M+2, N+2), v(M+2, N+2), fx(M+1, N), fy(M, N+1), b(M+2, N+2),
+        u(M+2, N+2), v(M+2, N+2), fx(M+1, N), fy(M+2, N+1), b(M+2, N+2),
         u_host(M+2, N+2), b_host(M+2, N+2), sctx(std::move(ctx)), prob(prob)
     {
         if (time_order == 1)
