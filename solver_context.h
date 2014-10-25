@@ -96,11 +96,11 @@ struct solver_context : public cuda_helper::cuda_context {
         raw_unknowns<real *> fxraw  = fx.data();
         raw_unknowns<real *> fyraw  = fy.data();
 
-        cuda_helper::dim3 block(512);
+        cuda_helper::dim3 block(128);
         size_t stride = block.x - 1;
         cuda_helper::dim3 grid((fx.m() + stride - 1) / stride, ceildiv<32>(n));
 
-        GPU_fluxes(grid, block, sizeof(sloped<real>) * block.x)({
+        GPU_fluxes(grid, block, sizeof(raw_unknowns<sloped<real> >) * block.x)({
                 &m, &n, &ld, &lines, &stride,
                 &uraw,
                 &fxraw,
