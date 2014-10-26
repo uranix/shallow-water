@@ -7,6 +7,11 @@
 #define APICALL
 #endif
 
+#include <cstdlib>
+
+template<class ComponentType>
+struct ref_unknowns;
+
 template<class ComponentType>
 struct raw_unknowns {
     ComponentType h, hu, hv;
@@ -15,6 +20,38 @@ struct raw_unknowns {
     APICALL raw_unknowns(const ComponentType &h, const ComponentType &hu, const ComponentType &hv)
         : h(h), hu(hu), hv(hv)
     { }
+    APICALL ref_unknowns<ComponentType> operator[](ptrdiff_t i) {
+        return ref_unknowns<ComponentType>(h + i, hu + i, hv + i);
+    }
+    template<typename Y>
+    APICALL raw_unknowns &operator=(const ref_unknowns<Y> &other) {
+        this->h  = *other.h;
+        this->hu = *other.hu;
+        this->hv = *other.hv;
+        return *this;
+    }
+};
+
+template<class ComponentType>
+struct ref_unknowns {
+    ComponentType h, hu, hv;
+    APICALL ref_unknowns() { }
+    APICALL ref_unknowns(const ComponentType &h, const ComponentType &hu, const ComponentType &hv)
+        : h(h), hu(hu), hv(hv)
+    { }
+    APICALL ref_unknowns &operator=(ref_unknowns &other) {
+        *this->h  = *other.h;
+        *this->hu = *other.hu;
+        *this->hv = *other.hv;
+        return *this;
+    }
+    template<typename Y>
+    APICALL ref_unknowns &operator=(raw_unknowns<Y> &other) {
+        *this->h  = other.h;
+        *this->hu = other.hu;
+        *this->hv = other.hv;
+        return *this;
+    }
 };
 
 #ifndef __NVCC__

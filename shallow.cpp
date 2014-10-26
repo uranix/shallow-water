@@ -18,11 +18,11 @@ struct Foo {
         hu.v = hu.vx = hu.vy = 0;
         hv.v = hv.vx = hv.vy = 0;
 
-        const double sigma = 0.1;
-        const double x0 = 0.25;
-        const double y0 = 0.25;
+        const real sigma = 0.1;
+        const real x0 = 0.25;
+        const real y0 = 0.25;
 
-        double ev = 0.1 * exp(-(pow(x - x0, 2) + pow(y - y0, 2)) / pow(sigma, 2));
+        real ev = 0.1 * exp(-(pow(x - x0, 2) + pow(y - y0, 2)) / pow(sigma, 2));
 
         h.v = 1 + ev;
         h.vx = -2 * (x - x0) / pow(sigma, 2) * ev;

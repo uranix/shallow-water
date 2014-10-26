@@ -61,16 +61,12 @@ __device__ inline void reflect_y(raw_unknowns<sloped<real> > &m) {
     m.hv.v  = -m.hv.v;
 }
 
-__device__ inline raw_unknowns<sloped<real> > get(const raw_unknowns<const sloped<real> *> &u, ptrdiff_t i) {
-    return raw_unknowns<sloped<real> >(u.h[i], u.hu[i], u.hv[i]);
-}
-
 __device__ inline real SUFFIXED(g)() {
-    return sizeof(real) == 4 ? 9.81f : 9.81;
+    return static_cast<real>(9.81);
 }
 
 __device__ inline void to_flux_x(raw_unknowns<real> &w) {
-    real eps = sizeof(real) == 4 ? 1e-6f : 1e-6;
+    real eps = static_cast<real>(1e-6);
     if (w.h < eps)
         w.h = eps;
 
@@ -84,7 +80,7 @@ __device__ inline void to_flux_x(raw_unknowns<real> &w) {
 }
 
 __device__ inline void to_flux_y(raw_unknowns<real> &w) {
-    real eps = sizeof(real) == 4 ? 1e-6f : 1e-6;
+    real eps = static_cast<real>(1e-6);
     if (w.h < eps)
         w.h = eps;
 
@@ -98,7 +94,7 @@ __device__ inline void to_flux_y(raw_unknowns<real> &w) {
 }
 
 __device__ inline void flux_x(
-        raw_unknowns<real *> fx, ptrdiff_t i,
+        ref_unknowns<real *> fx,
         const raw_unknowns<sloped<real> > &_left,
         const raw_unknowns<sloped<real> > &_right
     )
@@ -116,13 +112,13 @@ __device__ inline void flux_x(
     to_flux_x(fl);
     to_flux_x(fr);
 
-    fx.h [i] = (fl.h  + fr.h ) / 2 - c / 2 * (right.h  - left.h );
-    fx.hu[i] = (fl.hu + fr.hu) / 2 - c / 2 * (right.hu - left.hu);
-    fx.hv[i] = (fl.hv + fr.hv) / 2 - c / 2 * (right.hv - left.hv);
+    *fx.h  = (fl.h  + fr.h ) / 2 - c / 2 * (right.h  - left.h );
+    *fx.hu = (fl.hu + fr.hu) / 2 - c / 2 * (right.hu - left.hu);
+    *fx.hv = (fl.hv + fr.hv) / 2 - c / 2 * (right.hv - left.hv);
 };
 
 __device__ inline void flux_y(
-        raw_unknowns<real *> fy, ptrdiff_t i,
+        ref_unknowns<real *> fy,
         const raw_unknowns<sloped<real> > &_bottom,
         const raw_unknowns<sloped<real> > &_top
     )
@@ -140,9 +136,9 @@ __device__ inline void flux_y(
     to_flux_y(fb);
     to_flux_y(ft);
 
-    fy.h [i] = (fb.h  + ft.h ) / 2 - c / 2 * (top.h  - bottom.h );
-    fy.hu[i] = (fb.hu + ft.hu) / 2 - c / 2 * (top.hu - bottom.hu);
-    fy.hv[i] = (fb.hv + ft.hv) / 2 - c / 2 * (top.hv - bottom.hv);
+    *fy.h  = (fb.h  + ft.h ) / 2 - c / 2 * (top.h  - bottom.h );
+    *fy.hu = (fb.hu + ft.hu) / 2 - c / 2 * (top.hu - bottom.hu);
+    *fy.hv = (fb.hv + ft.hv) / 2 - c / 2 * (top.hv - bottom.hv);
 };
 
 extern "C" __global__ void SUFFIXED(flux)(
@@ -163,15 +159,15 @@ extern "C" __global__ void SUFFIXED(flux)(
     if (ylo == 1) {
         // Put u[y = 0] to mid. But, u[y = 0] should be computed from u[y = 1] and b.c.
         if (x < m + 2) {
-            mid[tx] = get(u, x + ld);
+            mid[tx] = u[x + ld];
             reflect_y(mid[tx]);
         }
     }
     for (int y = ylo, yld = ylo * ld; y < yhi; y++, yld += ld) {
         dn = mid[tx];
         if (x >= 1 && x <= m) {
-            mid[tx] = get(u, x + yld);
-            flux_y(fy, x + yld - ld, dn, mid[tx]);
+            mid[tx] = u[x + yld];
+            flux_y(fy[x + yld - ld], dn, mid[tx]);
         }
         __syncthreads();
         if (tx < stride && x <= m) {
@@ -183,7 +179,7 @@ extern "C" __global__ void SUFFIXED(flux)(
                 mid[tx+1] = mid[tx];
                 reflect_x(mid[tx+1]);
             }
-            flux_x(fx, x + yld - ld, mid[tx], mid[tx+1]);
+            flux_x(fx[x + yld - ld], mid[tx], mid[tx+1]);
         }
         __syncthreads();
     }
@@ -191,7 +187,40 @@ extern "C" __global__ void SUFFIXED(flux)(
         dn = mid[tx];
         if (x < m + 2) {
             reflect_y(mid[tx]);
-            flux_y(fy, x + n * ld, dn, mid[tx]);
+            flux_y(fy[x + n * ld], dn, mid[tx]);
         }
+    }
+}
+
+extern "C" __global__ void SUFFIXED(add_flux)(
+        const size_t m, const size_t n, const size_t ld, const size_t lines, const size_t stride,
+        const real dt, raw_unknowns<const sloped<real> *> u0, sloped<real> *b,
+        raw_unknowns<const real *> fx, raw_unknowns<const real *> fy, raw_unknowns<sloped<real> *> u
+    )
+{
+    extern __shared__ raw_unknowns<real> SUFFIXED(mid2)[];
+    raw_unknowns<real> *mid = SUFFIXED(mid2);
+    raw_unknowns<real> dn;
+    raw_unknowns<real> up;
+    int ylo = 1 + lines * blockIdx.y;
+    int yhi = ylo + lines;
+    if (yhi > n + 1)
+        yhi = n + 1;
+    int tx = threadIdx.x;
+    int x = threadIdx.x + blockIdx.x * stride;
+
+    if (x < m + 2) {
+        up = fy[x + (ylo - 1) * ld];
+    }
+
+    for (int y = ylo, yld = ylo * ld; y < yhi; y++, yld += ld) {
+        dn = up;
+        up = fy[x + yld];
+        if (x <= m)
+            mid[tx] = fx[x + yld - ld];
+        __syncthreads();
+        if (x > 0 && x <= m)
+            integrate(dt, u0[x + yld], mid[tx-1], mid[tx], dn, up, u[x + yld]);
+        __syncthreads();
     }
 }

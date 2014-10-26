@@ -71,8 +71,8 @@ private:
 
         for (size_t i = 0; i <= M + 1; i++)
             for (size_t j = 0; j <= N + 1; j++) {
-                double x = (i - 1) * hx;
-                double y = (j - 1) * hy;
+                real x = (i - 1) * hx;
+                real y = (j - 1) * hy;
 
                 prob.initial(x, y, b_host(i, j),
                         u_host.h(i, j), u_host.hu(i, j), u_host.hv(i, j));
@@ -80,7 +80,8 @@ private:
         u = u_host;
         b = b_host;
 
-        sctx->deriv_to_slope(hx, hy, b, u);
+//        sctx->deriv_to_slope(hx, hy, b, u);
+        sctx->deriv_to_slope(0, 0, b, u);
     }
 
     void compute_fluxes(const gpu_unknowns &u) {
@@ -88,8 +89,7 @@ private:
     }
 
     void add_fluxes_and_rhs(const real dt, const gpu_unknowns &u0, gpu_unknowns &u) {
-        u = u0;
-//        NOT_IMPLEMENTED;
+        sctx->add_fluxes_and_rhs(dt, u0, b, fx, fy, u);
     }
 
     void limit_slopes(gpu_unknowns &u) {
