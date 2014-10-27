@@ -89,7 +89,7 @@ private:
     }
 
     void add_fluxes_and_rhs(const real dt, const gpu_unknowns &u0, gpu_unknowns &u) {
-        sctx->add_fluxes_and_rhs(dt, u0, b, fx, fy, u);
+        sctx->add_fluxes_and_rhs(dt, hx, hy, u0, b, fx, fy, u);
     }
 
     void limit_slopes(gpu_unknowns &u) {
@@ -106,11 +106,16 @@ private:
         sctx->blend(target, weight, source);
     }
 
+    real estimate_timestep(const gpu_unknowns &u) {
+        return 0.0001;
+    }
+
 public:
 
     int step() { return _step; }
 
     void perform_step() {
+        dt = estimate_timestep(u);
         if (time_order == 1) {
             euler_limited(dt, u, u);
         }

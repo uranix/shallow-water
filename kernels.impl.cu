@@ -192,9 +192,29 @@ extern "C" __global__ void SUFFIXED(flux)(
     }
 }
 
+__device__ inline void integrate(
+        const real dt, const real hx, const real hy,
+        const ref_unknowns<const sloped<real> *> &u0,
+        const raw_unknowns<real> &lf,
+        const raw_unknowns<real> &rt,
+        const raw_unknowns<real> &dn,
+        const raw_unknowns<real> &up,
+        const ref_unknowns<sloped<real> *> &u
+    )
+{
+    *u.h  = *u0.h;
+    *u.hu = *u0.hu;
+    *u.hv = *u0.hv;
+
+    u.h ->v -= dt * ( (rt.h  - lf.h ) / hx + (up.h  - dn.h ) / hy );
+    u.hu->v -= dt * ( (rt.hu - lf.hu) / hx + (up.hu - dn.hu) / hy );
+    u.hv->v -= dt * ( (rt.hv - lf.hv) / hx + (up.hv - dn.hv) / hy );
+}
+
 extern "C" __global__ void SUFFIXED(add_flux)(
         const size_t m, const size_t n, const size_t ld, const size_t lines, const size_t stride,
-        const real dt, raw_unknowns<const sloped<real> *> u0, sloped<real> *b,
+        const real dt, const real hx, const real hy,
+        raw_unknowns<const sloped<real> *> u0, sloped<real> *b,
         raw_unknowns<const real *> fx, raw_unknowns<const real *> fy, raw_unknowns<sloped<real> *> u
     )
 {
@@ -219,8 +239,8 @@ extern "C" __global__ void SUFFIXED(add_flux)(
         if (x <= m)
             mid[tx] = fx[x + yld - ld];
         __syncthreads();
-        if (x > 0 && x <= m)
-            integrate(dt, u0[x + yld], mid[tx-1], mid[tx], dn, up, u[x + yld]);
+        if (tx > 0 && tx <= stride && x <= m)
+            integrate(dt, hx, hy, u0[x + yld], mid[tx-1], mid[tx], dn, up, u[x + yld]);
         __syncthreads();
     }
 }

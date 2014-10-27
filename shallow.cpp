@@ -33,10 +33,12 @@ struct Foo {
 int main() {
     try {
         auto ctx = std::make_shared<solver_context<float> >();
-        Solver<float, 2, Foo<float> > s(/* M = */50, /* N = */100, /* C = */.15, Foo<float>(), ctx);
+        Solver<float, 1, Foo<float> > s(/* M = */32, /* N = */32, /* C = */.15, Foo<float>(), ctx);
 
         while (s.step() < 10) {
+            std::cout << "Performing step" << std::endl;
             s.perform_step();
+            std::cout << "Saving step" << std::endl;
             s.save("out/");
         }
     } catch (const std::exception &e) {

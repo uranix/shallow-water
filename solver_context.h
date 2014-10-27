@@ -108,7 +108,7 @@ struct solver_context : public cuda_helper::cuda_context {
                 &fyraw
             });
     }
-    void add_fluxes_and_rhs(const real dt, const gpu_unknowns &u0, const gpu_sloped_array &b,
+    void add_fluxes_and_rhs(const real dt, const real hx, const real hy, const gpu_unknowns &u0, const gpu_sloped_array &b,
             const gpu_flux &fx, const gpu_flux &fy, gpu_unknowns &u)
     {
         size_t m  = u.m() - 2;
@@ -130,10 +130,10 @@ struct solver_context : public cuda_helper::cuda_context {
 
         GPU_add_flux(grid, block, sizeof(raw_unknowns<real>) * block.x)({
                 &m, &n, &ld, &lines, &stride,
-                &dt, &u0raw, &braw,
+                &dt, &hx, &hy,
+                &u0raw, &braw,
                 &fxraw, &fyraw, &uraw
             });
-        
     }
 };
 

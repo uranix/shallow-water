@@ -75,8 +75,8 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
     f << "BINARY\n";
     f << "DATASET UNSTRUCTURED_GRID\n";
     f << "POINTS " << M * N * 4 << " float\n";
-    for (size_t j = 0; j < N; j++)
-        for (size_t i = 0; i < M; i++) {
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++) {
             const sloped<real> &h = u_host.h(i, j);
             put<float>(f, i * hx);
             put<float>(f, j * hy);
