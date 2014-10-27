@@ -246,3 +246,47 @@ extern "C" __global__ void SUFFIXED(add_flux)(
         __syncthreads();
     }
 }
+
+extern "C" __global__ void SUFFIXED(max_speed)(
+        const size_t m, const size_t n, const size_t ld, const size_t lines,
+        raw_unknowns<const sloped<real> *> u, float *ret
+    )
+{
+    extern __shared__ real SUFFIXED(reduce)[];
+    real *reduce = SUFFIXED(reduce);
+
+    int tx = threadIdx.x;
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y_beg = 1 + lines * blockIdx.y;
+    int y_end = y_beg + lines;
+    if (y_end > n + 1)
+        y_end = n + 1;
+
+    int yld = y_beg * ld;
+    if (x >= 1 && x <= m)
+        reduce[tx] = u.h[x + yld].v;
+    else
+        reduce[tx] = 0;
+    yld += ld;
+
+    for (int y = y_beg + 1; y < y_end; y++, yld += ld) {
+        real v = 0;
+        if (x >= 1 && x <= m)
+            v = u.h[x + yld].v;
+        if (v > reduce[tx])
+            reduce[tx] = v;
+    }
+
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        __syncthreads();
+        if (tx < s)
+            if (reduce[tx + s] > reduce[tx])
+                reduce[tx] = reduce[tx + s];
+    }
+
+    if (tx == 0) {
+        real hmax = reduce[0];
+        float cmax = sqrt(hmax * SUFFIXED(g)());
+        atomicMax(ret, cmax);
+    }
+}

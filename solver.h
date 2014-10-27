@@ -77,10 +77,10 @@ private:
         t = 0;
         _step = 0;
 
-        for (size_t i = 0; i <= M + 1; i++)
-            for (size_t j = 0; j <= N + 1; j++) {
-                real x = (i - 1) * hx;
-                real y = (j - 1) * hy;
+        for (size_t i = 1; i <= M; i++)
+            for (size_t j = 1; j <= N; j++) {
+                real x = (i - 0.5) * hx;
+                real y = (j - 0.5) * hy;
 
                 prob.initial(x, y, b_host(i, j),
                         u_host.h(i, j), u_host.hu(i, j), u_host.hv(i, j));
@@ -115,7 +115,8 @@ private:
     }
 
     real estimate_timestep(const gpu_unknowns &u) {
-        return 0.0005;
+        real cmax = sctx->compute_max_speed(u);
+        return C * std::min(hx, hy) / cmax;
     }
 
 public:

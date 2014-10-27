@@ -35,11 +35,10 @@ int main() {
         auto ctx = std::make_shared<solver_context<float> >();
         Solver<float, 1, Foo<float> > s(/* M = */80, /* N = */80, /* C = */.15, Foo<float>(), ctx);
 
-        while (s.step() < 1000) {
-            std::cout << "Performing step" << std::endl;
+        while (s.time() < 10) {
             s.perform_step();
             if (s.step() % 10 == 0) {
-                std::cout << "Saving step #" << s.step() << std::endl;
+                std::cout << "Saving step #" << s.step() << ", t = " << s.time() << std::endl;
                 s.save("out/");
             }
         }

@@ -42,6 +42,7 @@ struct solver_context : public cuda_helper::cuda_context {
     DECLARE_SUFFIXED_KERNEL(real, der2slope, solver_context, GPU_der2slope);
     DECLARE_SUFFIXED_KERNEL(real, flux,      solver_context, GPU_fluxes);
     DECLARE_SUFFIXED_KERNEL(real, add_flux,  solver_context, GPU_add_flux);
+    DECLARE_SUFFIXED_KERNEL(real, max_speed, solver_context, GPU_max_speed);
 
     solver_context(const int devid = 0, unsigned int flags = CU_CTX_SCHED_AUTO, bool performInit = true)
         : cuda_context(devid, flags, performInit)
@@ -90,7 +91,7 @@ struct solver_context : public cuda_helper::cuda_context {
         size_t n  = u.n() - 2;
         size_t ld = u.ld();
 
-        size_t lines = 50;
+        size_t lines = 32;
 
         raw_unknowns<const sloped<real> *> uraw = u.data();
 
@@ -134,6 +135,34 @@ struct solver_context : public cuda_helper::cuda_context {
                 &u0raw, &braw,
                 &fxraw, &fyraw, &uraw
             });
+    }
+    real compute_max_speed(const gpu_unknowns &u) {
+        size_t m  = u.m() - 2;
+        size_t n  = u.n() - 2;
+        size_t ld = u.ld();
+
+        size_t lines = 32;
+
+        raw_unknowns<const sloped<real> *> uraw = u.data();
+
+        cuda_helper::allocator<float> retalloc;
+        float *ret = retalloc.allocate(1);
+        CUDA_CHECK(cuMemsetD32(reinterpret_cast<CUdeviceptr>(ret), 0, sizeof(float) / 4));
+
+        cuda_helper::dim3 block(128);
+        cuda_helper::dim3 grid(ceildiv<128>(m + 1), ceildiv<32>(n));
+
+        GPU_max_speed(grid, block, sizeof(real) * block.x)({
+                &m, &n, &ld, &lines,
+                &uraw, &ret
+            });
+
+        float max_speed;
+        memcpy_DtoH(&max_speed, ret, sizeof(float));
+
+        retalloc.deallocate(ret, 1);
+
+        return max_speed;
     }
 };
 
