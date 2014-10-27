@@ -90,7 +90,7 @@ struct solver_context : public cuda_helper::cuda_context {
         size_t n  = u.n() - 2;
         size_t ld = u.ld();
 
-        size_t lines = 32;
+        size_t lines = 50;
 
         raw_unknowns<const sloped<real> *> uraw = u.data();
 

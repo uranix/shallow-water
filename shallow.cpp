@@ -22,9 +22,9 @@ struct Foo {
         const real x0 = 0.25;
         const real y0 = 0.25;
 
-        real ev = 0.1 * exp(-(pow(x - x0, 2) + pow(y - y0, 2)) / pow(sigma, 2));
+        real ev = exp(-(pow(x - x0, 2) + pow(y - y0, 2)) / pow(sigma, 2));
 
-        h.v = 1 + ev;
+        h.v = .1 + ev;
         h.vx = -2 * (x - x0) / pow(sigma, 2) * ev;
         h.vy = -2 * (y - y0) / pow(sigma, 2) * ev;
     }
@@ -33,13 +33,15 @@ struct Foo {
 int main() {
     try {
         auto ctx = std::make_shared<solver_context<float> >();
-        Solver<float, 1, Foo<float> > s(/* M = */32, /* N = */32, /* C = */.15, Foo<float>(), ctx);
+        Solver<float, 1, Foo<float> > s(/* M = */80, /* N = */80, /* C = */.15, Foo<float>(), ctx);
 
-        while (s.step() < 10) {
+        while (s.step() < 1000) {
             std::cout << "Performing step" << std::endl;
             s.perform_step();
-            std::cout << "Saving step" << std::endl;
-            s.save("out/");
+            if (s.step() % 10 == 0) {
+                std::cout << "Saving step #" << s.step() << std::endl;
+                s.save("out/");
+            }
         }
     } catch (const std::exception &e) {
         std::cerr << "Exception msg = " << e.what() << std::endl;

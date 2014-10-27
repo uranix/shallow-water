@@ -15,7 +15,7 @@
 
 template<typename real, int time_order, class Problem>
 class Solver {
-    const size_t M, N;
+    const size_t M, N, LD;
     const real C;
     const real hx, hy;
 
@@ -49,9 +49,17 @@ public:
             const Problem &prob,
             std::shared_ptr<solver_context<real> > ctx
     ) :
-        M(M), N(N), C(C), hx(prob.xlen() / M), hy(prob.ylen() / N),
-        u(M+2, N+2), v(M+2, N+2), fx(M+1, N), fy(M+2, N+1), b(M+2, N+2),
-        u_host(M+2, N+2), b_host(M+2, N+2), sctx(std::move(ctx)), prob(prob)
+        M(M), N(N), LD(alignup<16>(M+2)), C(C),
+        hx(prob.xlen() / M), hy(prob.ylen() / N),
+        u (M+2, N+2, LD),
+        v (M+2, N+2, LD),
+        fx(M+1, N  , LD),
+        fy(M+2, N+1, LD),
+        b (M+2, N+2, LD),
+        u_host(M+2, N+2, LD),
+        b_host(M+2, N+2, LD),
+        sctx(std::move(ctx)),
+        prob(prob)
     {
         if (time_order == 1)
             std::cerr << "Method is likely to be unstable for any C" << std::endl;
@@ -107,7 +115,7 @@ private:
     }
 
     real estimate_timestep(const gpu_unknowns &u) {
-        return 0.0001;
+        return 0.0005;
     }
 
 public:

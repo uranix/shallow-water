@@ -7,7 +7,7 @@
 #define APICALL
 #endif
 
-#include <cstdlib>
+#include <cstddef>
 
 template<class ComponentType>
 struct ref_unknowns;
@@ -16,7 +16,7 @@ template<class ComponentType>
 struct raw_unknowns {
     ComponentType h, hu, hv;
     APICALL raw_unknowns() { }
-    APICALL raw_unknowns(size_t m, size_t n) : h(m, n), hu(m, n), hv(m, n) { }
+    APICALL raw_unknowns(size_t m, size_t n, size_t ld) : h(m, n, ld), hu(m, n, ld), hv(m, n, ld) { }
     APICALL raw_unknowns(const ComponentType &h, const ComponentType &hu, const ComponentType &hv)
         : h(h), hu(hu), hv(hv)
     { }
@@ -59,7 +59,7 @@ struct ref_unknowns {
 template<class ComponentType>
 struct unknowns : public raw_unknowns<ComponentType> {
     unknowns() { }
-    unknowns(size_t m, size_t n) : raw_unknowns<ComponentType>(m, n) { }
+    unknowns(size_t m, size_t n, size_t ld) : raw_unknowns<ComponentType>(m, n, ld) { }
     unknowns(ComponentType &h, ComponentType &hu, ComponentType &hv)
         : raw_unknowns<ComponentType>(h, hu, hv)
     { }

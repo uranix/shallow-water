@@ -149,21 +149,22 @@ extern "C" __global__ void SUFFIXED(flux)(
     extern __shared__ raw_unknowns<sloped<real> > SUFFIXED(mid)[]; /* IMO bug, extern names are in conflict for different real types */
     raw_unknowns<sloped<real> > *mid = SUFFIXED(mid);
     raw_unknowns<sloped<real> > dn;
-    int ylo = 1 + lines * blockIdx.y;
-    int yhi = ylo + lines;
-    if (yhi > n + 1)
-        yhi = n + 1;
+    int y_beg = 1 + lines * blockIdx.y;
+    int y_end = y_beg + lines;
+    if (y_end > n + 1)
+        y_end = n + 1;
     int tx = threadIdx.x;
     int x = threadIdx.x + blockIdx.x * stride;
 
-    if (ylo == 1) {
+    if (y_beg == 1) {
         // Put u[y = 0] to mid. But, u[y = 0] should be computed from u[y = 1] and b.c.
         if (x < m + 2) {
             mid[tx] = u[x + ld];
             reflect_y(mid[tx]);
         }
-    }
-    for (int y = ylo, yld = ylo * ld; y < yhi; y++, yld += ld) {
+    } else
+        mid[tx] = u[x + (y_beg - 1) * ld];
+    for (int y = y_beg, yld = y_beg * ld; y < y_end; y++, yld += ld) {
         dn = mid[tx];
         if (x >= 1 && x <= m) {
             mid[tx] = u[x + yld];
@@ -183,7 +184,7 @@ extern "C" __global__ void SUFFIXED(flux)(
         }
         __syncthreads();
     }
-    if (yhi == n + 1) {
+    if (y_end == n + 1) {
         dn = mid[tx];
         if (x < m + 2) {
             reflect_y(mid[tx]);
@@ -222,20 +223,21 @@ extern "C" __global__ void SUFFIXED(add_flux)(
     raw_unknowns<real> *mid = SUFFIXED(mid2);
     raw_unknowns<real> dn;
     raw_unknowns<real> up;
-    int ylo = 1 + lines * blockIdx.y;
-    int yhi = ylo + lines;
-    if (yhi > n + 1)
-        yhi = n + 1;
+    int y_beg = 1 + lines * blockIdx.y;
+    int y_end = y_beg + lines;
+    if (y_end > n + 1)
+        y_end = n + 1;
     int tx = threadIdx.x;
     int x = threadIdx.x + blockIdx.x * stride;
 
-    if (x < m + 2) {
-        up = fy[x + (ylo - 1) * ld];
-    }
+    if (x < m + 2)
+        up = fy[x + (y_beg - 1) * ld];
 
-    for (int y = ylo, yld = ylo * ld; y < yhi; y++, yld += ld) {
-        dn = up;
-        up = fy[x + yld];
+    for (int y = y_beg, yld = y_beg * ld; y < y_end; y++, yld += ld) {
+        if (x < m + 2) {
+            dn = up;
+            up = fy[x + yld];
+        }
         if (x <= m)
             mid[tx] = fx[x + yld - ld];
         __syncthreads();
