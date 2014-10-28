@@ -207,9 +207,22 @@ __device__ inline void integrate(
     *u.hu = *u0.hu;
     *u.hv = *u0.hv;
 
+    raw_unknowns<real> fx(u.h->v, u.hu->v, u.hv->v);
+    raw_unknowns<real> fy(u.h->v, u.hu->v, u.hv->v);
+    to_flux_x(fx);
+    to_flux_y(fy);
+
     u.h ->v -= dt * ( (rt.h  - lf.h ) / hx + (up.h  - dn.h ) / hy );
     u.hu->v -= dt * ( (rt.hu - lf.hu) / hx + (up.hu - dn.hu) / hy );
     u.hv->v -= dt * ( (rt.hv - lf.hv) / hx + (up.hv - dn.hv) / hy );
+
+    u.h ->vx -= (dt / 3) * ( (rt.h  + lf.h  - 2 * fx.h ) / hx );
+    u.hu->vx -= (dt / 3) * ( (rt.hu + lf.hu - 2 * fx.hu) / hx );
+    u.hv->vx -= (dt / 3) * ( (rt.hv + lf.hv - 2 * fx.hv) / hx );
+
+    u.h ->vy -= (dt / 3) * ( (up.h  + dn.h  - 2 * fy.h ) / hy );
+    u.hu->vy -= (dt / 3) * ( (up.hu + dn.hu - 2 * fy.hu) / hy );
+    u.hv->vy -= (dt / 3) * ( (up.hv + dn.hv - 2 * fy.hv) / hy );
 }
 
 extern "C" __global__ void SUFFIXED(add_flux)(

@@ -33,9 +33,9 @@ struct Foo {
 int main() {
     try {
         auto ctx = std::make_shared<solver_context<float> >();
-        Solver<float, 1, Foo<float> > s(/* M = */80, /* N = */80, /* C = */.15, Foo<float>(), ctx);
+        Solver<float, 2, Foo<float> > s(/* M = */100, /* N = */70, /* C = */.15, Foo<float>(), ctx);
 
-        while (s.time() < 10) {
+        while (s.time() < 5) {
             s.perform_step();
             if (s.step() % 10 == 0) {
                 std::cout << "Saving step #" << s.step() << ", t = " << s.time() << std::endl;

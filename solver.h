@@ -88,8 +88,7 @@ private:
         u = u_host;
         b = b_host;
 
-//        sctx->deriv_to_slope(hx, hy, b, u);
-        sctx->deriv_to_slope(0, 0, b, u);
+        sctx->deriv_to_slope(hx, hy, b, u);
     }
 
     void compute_fluxes(const gpu_unknowns &u) {
