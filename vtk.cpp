@@ -40,6 +40,14 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
     for (size_t j = 1; j <= N; j++)
         for (size_t i = 1; i <= M; i++)
             put<float>(f, u_host.h(i, j).mid());
+    f << "\nSCALARS hx float\nLOOKUP_TABLE default\n";
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++)
+            put<float>(f, u_host.h(i, j).vx);
+    f << "\nSCALARS hy float\nLOOKUP_TABLE default\n";
+    for (size_t j = 1; j <= N; j++)
+        for (size_t i = 1; i <= M; i++)
+            put<float>(f, u_host.h(i, j).vy);
 
     f << "\nSCALARS b float\nLOOKUP_TABLE default\n";
     for (size_t j = 1; j <= N; j++)
@@ -54,7 +62,7 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
     f << "\nVECTORS v float\n";
         for (size_t j = 1; j <= N; j++)
             for (size_t i = 1; i <= M; i++) {
-                real h = u_host.h(i, j).mid();
+                real h = u_host.h(i, j).mid() + 1e-6f;
                 real vx = u_host.hu(i, j).mid() / h;
                 real vy = u_host.hv(i, j).mid() / h;
                 put<float>(f, vx);
@@ -77,7 +85,7 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
     f << "POINTS " << M * N * 4 << " float\n";
     for (size_t j = 1; j <= N; j++)
         for (size_t i = 1; i <= M; i++) {
-            const sloped<real> &h = u_host.h(i, j);
+            const sloped<real> &h = u_host.h(i, j) + b_host(i, j);
             put<float>(f, i * hx);
             put<float>(f, j * hy);
             put<float>(f, h.ll());
@@ -107,7 +115,7 @@ void Solver<real, time_order, Problem>::save(const std::string &prefix) {
     f << "\nVECTORS v float\n";
         for (size_t j = 1; j <= N; j++)
             for (size_t i = 1; i <= M; i++) {
-                real h = u_host.h(i, j).mid();
+                real h = u_host.h(i, j).mid() + 1e-6f;
                 real vx = u_host.hu(i, j).mid() / h;
                 real vy = u_host.hv(i, j).mid() / h;
                 put<float>(f, vx);

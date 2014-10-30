@@ -21,7 +21,7 @@ add_executable(shallow shallow.cpp)
 include_directories(cuda-helper/ ${CUDA_INCLUDE_DIRS})
 target_link_libraries(shallow ${CUDA_CUDA_LIBRARY})
 
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g -G -arch=sm_12")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g -arch=sm_12")
 set(CUDA_HOST_COMPILER g++)
 CUDA_COMPILE_PTX(kernels kernels.cu)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/kernels.ptx COMMAND ${CMAKE_COMMAND} -E copy ${kernels} ${CMAKE_BINARY_DIR}/kernels.ptx DEPENDS ${kernels})

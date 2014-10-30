@@ -20,10 +20,12 @@ class Solver {
     const real hx, hy;
 
     typedef mem::template  gpu_array<real>           gpu_array;
+    typedef mem::template host_array<real>          host_array;
     typedef mem::template  gpu_array<sloped<real> >  gpu_sloped_array;
     typedef mem::template host_array<sloped<real> > host_sloped_array;
 
     typedef unknowns< gpu_array>         gpu_flux;
+    typedef unknowns<host_array>        host_flux;
     typedef unknowns< gpu_sloped_array>  gpu_unknowns;
     typedef unknowns<host_sloped_array> host_unknowns;
 
@@ -35,6 +37,8 @@ class Solver {
 
     host_unknowns u_host;
     host_sloped_array b_host;
+    host_flux fx_host;
+    host_flux fy_host;
 
     std::shared_ptr<solver_context<real> > sctx;
 
@@ -58,6 +62,8 @@ public:
         b (M+2, N+2, LD),
         u_host(M+2, N+2, LD),
         b_host(M+2, N+2, LD),
+        fx_host(M+1, N  , LD),
+        fy_host(M+2, N+1, LD),
         sctx(std::move(ctx)),
         prob(prob)
     {
@@ -91,8 +97,35 @@ private:
         sctx->deriv_to_slope(hx, hy, b, u);
     }
 
+    void dump(const host_flux &f, const char *name, size_t s = 0) {
+        std::cout << name << ".h: " << std::endl;
+        for (size_t j = 0; j < f.n(); j++) {
+            for (size_t i = s; i < f.m() - s; i++)
+                printf("%10.6f ", f.h(i, j));
+            printf("\n");
+        }
+        std::cout << name << ".hu: " << std::endl;
+        for (size_t j = 0; j < f.n(); j++) {
+            for (size_t i = s; i < f.m() - s; i++)
+                printf("%10.6f ", f.hu(i, j));
+            printf("\n");
+        }
+        std::cout << name << ".hv: " << std::endl;
+        for (size_t j = 0; j < f.n(); j++) {
+            for (size_t i = s; i < f.m() - s; i++)
+                printf("%10.6f ", f.hv(i, j));
+            printf("\n");
+        }
+    }
+
     void compute_fluxes(const gpu_unknowns &u) {
         sctx->compute_fluxes(u, fx, fy);
+
+/*        fx_host = fx;
+        fy_host = fy;
+
+        dump(fx_host, "fx");
+        dump(fy_host, "fy", 1);*/
     }
 
     void add_fluxes_and_rhs(const real dt, const gpu_unknowns &u0, gpu_unknowns &u) {
@@ -100,7 +133,8 @@ private:
     }
 
     void limit_slopes(gpu_unknowns &u) {
-//        NOT_IMPLEMENTED;
+        sctx->compute_slopes(b, u, fx, fy);
+        sctx->limit_slopes(b, fx, fy, u);
     }
 
     void euler_limited(const real dt, const gpu_unknowns &u0, gpu_unknowns &u) {
@@ -120,7 +154,9 @@ private:
 
 public:
 
-    int step() { return _step; }
+    real tmax() const { return prob.tmax(); }
+    real next(real t) const { return prob.next(t); }
+    int step() const { return _step; }
 
     void perform_step() {
         dt = estimate_timestep(u);

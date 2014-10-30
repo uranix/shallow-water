@@ -38,11 +38,13 @@ struct solver_context : public cuda_helper::cuda_context {
     typedef unknowns<gpu_sloped_array> gpu_unknowns;
     typedef unknowns<gpu_array>        gpu_flux;
 
-    DECLARE_SUFFIXED_KERNEL(real, blend,     solver_context, GPU_blend);
-    DECLARE_SUFFIXED_KERNEL(real, der2slope, solver_context, GPU_der2slope);
-    DECLARE_SUFFIXED_KERNEL(real, flux,      solver_context, GPU_fluxes);
-    DECLARE_SUFFIXED_KERNEL(real, add_flux,  solver_context, GPU_add_flux);
-    DECLARE_SUFFIXED_KERNEL(real, max_speed, solver_context, GPU_max_speed);
+    DECLARE_SUFFIXED_KERNEL(real, blend,        solver_context, GPU_blend);
+    DECLARE_SUFFIXED_KERNEL(real, der2slope,    solver_context, GPU_der2slope);
+    DECLARE_SUFFIXED_KERNEL(real, flux,         solver_context, GPU_fluxes);
+    DECLARE_SUFFIXED_KERNEL(real, add_flux,     solver_context, GPU_add_flux);
+    DECLARE_SUFFIXED_KERNEL(real, slope,        solver_context, GPU_slopes);
+    DECLARE_SUFFIXED_KERNEL(real, limit_slopes, solver_context, GPU_limit_slopes);
+    DECLARE_SUFFIXED_KERNEL(real, max_speed,    solver_context, GPU_max_speed);
 
     solver_context(const int devid = 0, unsigned int flags = CU_CTX_SCHED_AUTO, bool performInit = true)
         : cuda_context(devid, flags, performInit)
@@ -109,6 +111,62 @@ struct solver_context : public cuda_helper::cuda_context {
                 &fyraw
             });
     }
+
+    void compute_slopes(const gpu_sloped_array &b, const gpu_unknowns &u, gpu_flux &fx, gpu_flux &fy) {
+        size_t m  = u.m() - 2;
+        size_t n  = u.n() - 2;
+        size_t ld = u.ld();
+
+        size_t lines = 32;
+
+        raw_unknowns<const sloped<real> *> uraw = u.data();
+
+        raw_unknowns<real *> fxraw  = fx.data();
+        raw_unknowns<real *> fyraw  = fy.data();
+
+        const sloped<real> *braw = b.data();
+
+        cuda_helper::dim3 block(128);
+        size_t stride = block.x - 1;
+        cuda_helper::dim3 grid((fx.m() + stride - 1) / stride, ceildiv<32>(n));
+
+        GPU_slopes(grid, block, sizeof(raw_unknowns<sloped<real> >) * block.x)({
+                &m, &n, &ld, &lines, &stride,
+                &braw,
+                &uraw,
+                &fxraw,
+                &fyraw
+            });
+    }
+
+    void limit_slopes(const gpu_sloped_array &b, const gpu_flux &fx, const gpu_flux &fy, gpu_unknowns &u) {
+        size_t m  = u.m() - 2;
+        size_t n  = u.n() - 2;
+        size_t ld = u.ld();
+
+        size_t lines = 32;
+
+        raw_unknowns<sloped<real> *> uraw = u.data();
+
+        raw_unknowns<const real *> fxraw  = fx.data();
+        raw_unknowns<const real *> fyraw  = fy.data();
+
+        const sloped<real> *braw = b.data();
+
+        cuda_helper::dim3 block(128);
+        size_t stride = block.x - 1;
+        cuda_helper::dim3 grid((fx.m() + stride - 1) / stride, ceildiv<32>(n));
+
+
+        GPU_limit_slopes(grid, block, sizeof(raw_unknowns<real>) * block.x)({
+                &m, &n, &ld, &lines, &stride,
+                &braw,
+                &fxraw,
+                &fyraw,
+                &uraw
+            });
+    }
+
     void add_fluxes_and_rhs(const real dt, const real hx, const real hy, const gpu_unknowns &u0, const gpu_sloped_array &b,
             const gpu_flux &fx, const gpu_flux &fy, gpu_unknowns &u)
     {
